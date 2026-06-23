@@ -13,11 +13,18 @@
 // Day 2:
 // Yesterday was one way connection, today implement two way conversation
 
+// Day 3:
+// Introduce goroutines to handle concurrency
+
+// Day 4:
+// Add text protocol: client sends ping, server responds pong. Anything else: error.
+
 package main
 
 import (
 	"fmt"
 	"net"
+	"strings"
 )
 
 func main() {
@@ -39,7 +46,7 @@ func main() {
 			continue
 		}
 
-		handleConnection(conn)
+		go handleConnection(conn)
 	}
 
 }
@@ -56,15 +63,21 @@ func handleConnection(conn net.Conn) {
 			return
 		}
 
-		fmt.Println(string(buf[:n]))
+		input := string(buf[:n])
+		command := strings.TrimSpace(input)
 
-		_, err1 := conn.Write(buf[:n])
-
-		if err1 != nil {
-			fmt.Println("Error sending data back")
-			return
+		if command == "PING" {
+			_, err1 := conn.Write([]byte("PONG\n"))
+			if err1 != nil {
+				fmt.Println(err1)
+				return
+			}
+		} else {
+			_, err1 := conn.Write([]byte("ERR Unknown Command\n"))
+			if err1 != nil {
+				fmt.Println(err1)
+				return
+			}
 		}
-
-		fmt.Println("message sent back!")
 	}
 }
