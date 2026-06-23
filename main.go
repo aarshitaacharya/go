@@ -4,10 +4,10 @@
 // Use netcat to test: nc localhost 6379.
 
 // Step 1: Print hello
-// Step 2: Create a TCP server that listens on port 6379 and handle errors
-// Step 3: Infinite waiting loop to pause and wait
-// Step 4: Set up a buffer to read incoming data
-// Step 5: Print the received data to the console
+// Step 2: Open a TCP server on port 6379, and handle errors
+// Step 3: Infinite loop to listens
+// Step 4: Create a buffer to store bytes
+// Step 5: Print those bytes
 
 package main
 
@@ -18,26 +18,40 @@ import (
 
 func main() {
 	fmt.Println("hello")
+
 	listener, err := net.Listen("tcp", "localhost:6379")
 
 	if err != nil {
-		fmt.Println("Error starting server:", err)
+		fmt.Println("Error setting up connection")
 		return
 	}
 
 	defer listener.Close()
-	fmt.Println("Server successfully listening on port 6379")
 
 	for {
 		conn, err := listener.Accept()
-
 		if err != nil {
-			fmt.Println("Error accepting connection", err)
+			fmt.Println("Error accepting connections")
 			continue
 		}
 
-		fmt.Println("Client connected!")
+		handleConnection(conn)
+	}
 
-		conn.Close()
+}
+
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	buf := make([]byte, 1024)
+
+	for {
+		n, err := conn.Read(buf)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Println(string(buf[:n]))
 	}
 }
