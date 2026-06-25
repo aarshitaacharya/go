@@ -1,23 +1,5 @@
-// Day 1:
-// Write a program that prints "hello".
-// Then write a TCP server that listens on
-// port 6379 and prints whatever bytes come in.
-// Use netcat to test: nc localhost 6379.
-
-// Step 1: Print hello
-// Step 2: Open a TCP server on port 6379, and handle errors
-// Step 3: Infinite loop to listens
-// Step 4: Create a buffer to store bytes
-// Step 5: Print those bytes
-
-// Day 2:
-// Yesterday was one way connection, today implement two way conversation
-
-// Day 3:
-// Introduce goroutines to handle concurrency
-
-// Day 4:
-// Add text protocol: client sends ping, server responds pong. Anything else: error.
+// Today's task:
+// Modify it to accept Set and Get commands using simple map[string]string
 
 package main
 
@@ -28,6 +10,8 @@ import (
 )
 
 func main() {
+	db := make(map[string]string)
+
 	fmt.Println("hello")
 
 	listener, err := net.Listen("tcp", "localhost:6379")
@@ -46,12 +30,12 @@ func main() {
 			continue
 		}
 
-		go handleConnection(conn)
+		go handleConnection(conn, db)
 	}
 
 }
 
-func handleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn, db map[string]string) {
 	defer conn.Close()
 
 	buf := make([]byte, 1024)
@@ -64,20 +48,24 @@ func handleConnection(conn net.Conn) {
 		}
 
 		input := string(buf[:n])
-		command := strings.TrimSpace(input)
+		command := strings.Fields(input)
 
-		if command == "PING" {
-			_, err1 := conn.Write([]byte("PONG\n"))
+		if command[0] == "SET" {
+			db[command[1]] = command[2]
+			_, err1 := conn.Write([]byte("OK\n"))
 			if err1 != nil {
 				fmt.Println(err1)
-				return
+			}
+
+		} else if command[0] == "GET" {
+			val, exists := db[command[1]]
+			if !exists {
+				conn.Write([]byte("(nil)\n"))
+			} else {
+				conn.Write([]byte(val + "\n"))
 			}
 		} else {
-			_, err1 := conn.Write([]byte("ERR Unknown Command\n"))
-			if err1 != nil {
-				fmt.Println(err1)
-				return
-			}
+			fmt.Println("Error, invalid value")
 		}
 	}
 }
