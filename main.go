@@ -97,6 +97,14 @@ func dispatchCommand(args []string, db map[string]string) string {
 		}
 		return "1\n"
 
+	case "CRASH":
+		for i := 0; i < 100; i++ {
+			go func(id int) {
+				db["collision_key"] = fmt.Sprintf("value-%d", id)
+			}(i)
+		}
+		return "Chaos unleashed\n"
+
 	default:
 		return "ERR: Command does not exists"
 	}
