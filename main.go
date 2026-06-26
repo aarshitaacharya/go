@@ -60,10 +60,16 @@ func dispatchCommand(args []string, db map[string]string) string {
 	}
 	switch args[0] {
 	case "SET":
+		if len(args) != 3 {
+			return "ERR: Wrong number of arguments\n"
+		}
 		db[args[1]] = args[2]
 		return "OK\n"
 
 	case "GET":
+		if len(args) != 2 {
+			return "ERR: Wrong number of arguments\n"
+		}
 		val, exists := db[args[1]]
 		if !exists {
 			return "(nil)\n"
@@ -71,6 +77,9 @@ func dispatchCommand(args []string, db map[string]string) string {
 		return val + "\n"
 
 	case "DEL":
+		if len(args) != 2 {
+			return "ERR: Wrong number of arguments\n"
+		}
 		_, exists := db[args[1]]
 		if !exists {
 			return "0\n"
@@ -79,6 +88,9 @@ func dispatchCommand(args []string, db map[string]string) string {
 		return "1\n"
 
 	case "EXISTS":
+		if len(args) != 2 {
+			return "ERR: Wrong number of arguments\n"
+		}
 		_, exists := db[args[1]]
 		if !exists {
 			return "0\n"
