@@ -49,23 +49,43 @@ func handleConnection(conn net.Conn, db map[string]string) {
 
 		input := string(buf[:n])
 		command := strings.Fields(input)
+		response := dispatchCommand(command, db)
+		conn.Write(([]byte(response)))
+	}
+}
 
-		if command[0] == "SET" {
-			db[command[1]] = command[2]
-			_, err1 := conn.Write([]byte("OK\n"))
-			if err1 != nil {
-				fmt.Println(err1)
-			}
+func dispatchCommand(args []string, db map[string]string) string {
+	if len(args) == 0 {
+		return ""
+	}
+	switch args[0] {
+	case "SET":
+		db[args[1]] = args[2]
+		return "OK\n"
 
-		} else if command[0] == "GET" {
-			val, exists := db[command[1]]
-			if !exists {
-				conn.Write([]byte("(nil)\n"))
-			} else {
-				conn.Write([]byte(val + "\n"))
-			}
-		} else {
-			fmt.Println("Error, invalid value")
+	case "GET":
+		val, exists := db[args[1]]
+		if !exists {
+			return "(nil)\n"
 		}
+		return val + "\n"
+
+	case "DEL":
+		_, exists := db[args[1]]
+		if !exists {
+			return "0\n"
+		}
+		delete(db, args[1])
+		return "1\n"
+
+	case "EXISTS":
+		_, exists := db[args[1]]
+		if !exists {
+			return "0\n"
+		}
+		return "1\n"
+
+	default:
+		return "ERR: Command does not exists"
 	}
 }
