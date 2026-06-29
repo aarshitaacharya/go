@@ -1,24 +1,22 @@
-// Today's task:
-// Modify it to accept Set and Get commands using simple map[string]string
-
 package main
 
 import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 )
 
 type State struct {
-	mu sync.RWMutex
-	db map[string]string
+	db      map[string]string
+	actions chan func()
 }
 
 func main() {
 	state := &State{
-		db: make(map[string]string),
+		db:      make(map[string]string),
+		actions: make(chan func()),
 	}
+	go runBackendManager(state)
 
 	fmt.Println("hello")
 
@@ -71,59 +69,90 @@ func dispatchCommand(args []string, state *State) string {
 		if len(args) != 3 {
 			return "ERR: Wrong number of arguments\n"
 		}
-		state.mu.Lock()
-		state.db[args[1]] = args[2]
-		state.mu.Unlock()
-		return "OK\n"
+
+		resChan := make(chan string)
+
+		state.actions <- func() {
+			state.db[args[1]] = args[2]
+			resChan <- "OK\n"
+		}
+
+		return <-resChan
 
 	case "GET":
 		if len(args) != 2 {
 			return "ERR: Wrong number of arguments\n"
 		}
-		state.mu.RLock()
-		val, exists := state.db[args[1]]
-		state.mu.RUnlock()
-		if !exists {
-			return "(nil)\n"
+
+		resChan := make(chan string)
+
+		state.actions <- func() {
+			val, exists := state.db[args[1]]
+			if !exists {
+				resChan <- "(nil)\n"
+			} else {
+				resChan <- val + "\n"
+			}
+
 		}
-		return val + "\n"
+		return <-resChan
 
 	case "DEL":
 		if len(args) != 2 {
 			return "ERR: Wrong number of arguments\n"
 		}
-		_, exists := state.db[args[1]]
-		if !exists {
-			return "0\n"
+
+		resChan := make(chan string)
+
+		state.actions <- func() {
+			_, exists := state.db[args[1]]
+			if !exists {
+				resChan <- "0\n"
+			} else {
+				delete(state.db, args[1])
+				resChan <- "1\n"
+			}
 		}
-		state.mu.Lock()
-		delete(state.db, args[1])
-		state.mu.Unlock()
-		return "1\n"
+
+		return <-resChan
 
 	case "EXISTS":
 		if len(args) != 2 {
 			return "ERR: Wrong number of arguments\n"
 		}
-		state.mu.RLock()
-		_, exists := state.db[args[1]]
-		state.mu.RUnlock()
-		if !exists {
-			return "0\n"
+
+		resChan := make(chan string)
+
+		state.actions <- func() {
+			_, exists := state.db[args[1]]
+			if !exists {
+				resChan <- "0\n"
+			} else {
+				resChan <- "1\n"
+			}
 		}
-		return "1\n"
+
+		return <-resChan
 
 	case "CRASH":
+
 		for i := 0; i < 100; i++ {
 			go func(id int) {
-				state.mu.Lock()
-				state.db["collision_key"] = fmt.Sprintf("value-%d", id)
-				state.mu.Unlock()
+				state.actions <- func() {
+					state.db["collision_key"] = fmt.Sprintf("value-%d", id)
+				}
+
 			}(i)
 		}
-		return "Chaos unleashed\n"
+		return "Chaos"
 
 	default:
 		return "ERR: Command does not exists"
+	}
+}
+
+func runBackendManager(state *State) {
+	for action := range state.actions {
+		action()
 	}
 }
