@@ -29,3 +29,19 @@ Two clients `SET` the same key simultaneously. Go's `map` is not safe for concur
 ## What I Learned About TCP Servers
 
 TCP gives you a stream of bytes, not messages. There's no built-in concept of where one command ends and the next begins — that's what a protocol is for. Building even a trivial text protocol forces you to think about framing, error cases, and what happens when a client sends garbage. Concurrency makes all of this harder: a map that works fine with one client silently corrupts data with five. The race detector is the tool that makes the invisible visible.
+
+## Result
+go test -bench=.
+
+goos: darwin
+
+goarch: amd64
+
+pkg: my-redis-store
+
+cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
+
+BenchmarkMutexConcurrentGet-16        17950321                65.04 ns/op
+
+BenchmarkChannelConcurrentGet-16       14543
+
